@@ -1,2 +1,0 @@
-# Helping linguist detect files as Verilog, not Coq.
-*.v linguist-language=Verilog
