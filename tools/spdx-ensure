@@ -16,10 +16,13 @@ missingok_dirs=(
 
 missingok_files=(
 .editorconfig
-.gitattributes
 .gitignore
 README.md
 LICENSE
+Makefile
+nvcm_test/application_fpga.bin
+nvcm_test/application_fpga.nvcm
+requirements.txt
 )
 
 is_missingok() {

@@ -1,16 +1,16 @@
 # pynvcm
 
-pynvcm with friends is a tool to program the NVCM of a Tillitis' Tkey
-(ICE40).
+pynvcm is a tool to program the non-volatile configuration memory
+(NVCM) inside the of a Tillitis' Tkey FPGA (ICE40).
 
 Either clone this repository and run from the Python interpreter or
 download and run our pre-packed executables from
 [releases](https://github.com/tillitis/pynvcm/releases).
 
-**Note**: programming the NVCM is non-reversiable.
+**Note**: programming the NVCM is non-reversable.
 
-**Note**: the NVCM can still be read out unless you set the security
-bit.
+**Note**: the NVCM (including the Unique Device Secret) can still be
+read out unless you set the security bit.
 
 ## Usage
 
@@ -73,25 +73,32 @@ For example to write the NVCM, verify and set the security bit use:
 ## Licenses and SPDX tags
 
 Unless otherwise noted, the project sources are licensed under the
-terms and conditions of the "GNU General Public License v2.0 only":
+terms and conditions of the "ISC license":
 
 > Copyright Tillitis AB.
+> 
+> Permission to use, copy, modify, and/or distribute this software
+> for any purpose with or without fee is hereby granted, provided
+> that the above copyright notice and this permission notice
+> appear in all copies.
 >
-> These programs are free software: you can redistribute it and/or
-> modify it under the terms of the GNU General Public License as
-> published by the Free Software Foundation, version 2 only.
->
-> These programs are distributed in the hope that they will be useful,
-> but WITHOUT ANY WARRANTY; without even the implied warranty of
-> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-> General Public License for more details.
->
-> You should have received a copy of the GNU General Public License
-> along with this program. If not, see:
->
-> https://www.gnu.org/licenses
+> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+> WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+> WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+> AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+> CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+> LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+> NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+> CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-See [LICENSE](LICENSE) for the full GPLv2-only license text.
+Some specific files, usually under the same license, have other
+origin and copyright holders. `pynvcm.py` was originally written by:
+
+- Trammell Hudson, hudson@trmm.net
+- Matthew Mets, [Github](https://github.com/cibomahto)
+- Peter Lawrence, [Github](https://github.com/majbthrd)
+
+We keep a [LICENSE](LICENSE) file to easily autodetect the license.
 
 External source code we have imported are isolated in their own
 directories. They may be released under other licenses. This is noted
