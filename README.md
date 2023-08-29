@@ -1,86 +1,117 @@
+# pynvcm
 
-[![ci](https://github.com/tillitis/tillitis-key1/actions/workflows/ci.yaml/badge.svg?branch=main&event=push)](https://github.com/tillitis/tillitis-key1/actions/workflows/ci.yaml)
+pynvcm is a tool to program the non-volatile configuration memory
+(NVCM) inside the of a Tillitis' Tkey FPGA (ICE40).
 
-# Tillitis TKey
+Either clone this repository and run from the Python interpreter or
+download and run our pre-packed executables from
+[releases](https://github.com/tillitis/pynvcm/releases).
 
-## Introduction
+**Note**: programming the NVCM is non-reversable.
 
-The Tillitis TKey is a new kind of USB security token. What makes the
-TKey unique is that it allows a user to load and run applications on
-the device, while still providing security. This allow for open-ended,
-flexible usage. Given the right application, the TKey can support use
-cases such as SSH login, Ed25519 signing, Root of Trust, FIDO2, TOTP,
-Passkey, and more.
+**Note**: the NVCM (including the Unique Device Secret) can still be
+read out unless you set the security bit.
 
-During the load operation, the device measures the application
-(calculates a cryptographic hash digest over it) before running
-it on the open hardware security processor. This measurement
-is similar to [TCG DICE](https://trustedcomputinggroup.org/work-groups/dice-architectures/).
+## Usage
 
-Each TKey device contains a Unique Device Secret (UDS), which
-together with the application measurement, and an optional
-User-Supplied Secret (USS), is used to derive key material unique to each
-application. This guarantees that if the integrity of the application
-loaded onto the device has been tampered with, the correct keys
-needed for an authentication will not be generated.
+Set up a python virtualenv, unless if you are using the pre-packed
+executables you can skip this step.
 
-Key derivation with a User-Supplied Secret allows users to build and
-load their own apps, while ensuring that each app loaded will have
-its own cryptographic identity, and can also be used for authentication
-towards different services.
+For linux
+```
+sudo apt install python3.10-venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-The TKey platform is based around a 32-bit RISC-V processor and has
-128 KB of RAM. Firmware can load and start an app that is as large as
-RAM.
+for macOS
 
-All of the TKey software, firmware, FPGA Verilog source code, schematics
-and PCB design files are open source. Like all trustworthy security software
-and hardware should be. This in itself makes it different, as other
-security tokens utilize at least some closed source hardware for its
-security-critical operations.
+```
+brew install python3.10
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-![Tillitis Key 1 PCB, first implementation](doc/images/mta1-usb-v1.jpg)
-*The TK1 PCB, the first implementation of the TKey.*
+for Windows
+```
+winget install Python.Python.3.10
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
+then run with the appropriate options
 
-## Documentation
+```
+usage: pynvcm.py [-h] [-v] [-f] [-b] [--speed SPI_SPEED] [-i] [--read READ_FILE] [--verify VERIFY_FILE] [--write WRITE_FILE] [--ignore-blank] [--secure]
+                 [--my-design-is-good-enough]
 
-### Getting started
+options:
+  -h, --help            show this help message and exit
+  -v, --verbose         Show debug information and serial read/writes
+  -f, --sleep_flash     Put an attached SPI flash chip in deep sleep
+  -b, --boot            Deassert the reset line to allow the FPGA to boot
+  --speed SPI_SPEED     SPI clock speed, in MHz
+  -i, --info            Read chip ID, trim and other info
+  --read READ_FILE      Read contents of NVCM
+  --verify VERIFY_FILE  Verify the contents of NVCM
+  --write WRITE_FILE    bitstream file to write to NVCM (warning: not reversable!)
+  --ignore-blank        Proceed even if the chip is not blank
+  --secure              Set security bits to prevent modification (warning: not reversable!)
+  --my-design-is-good-enough
+                        Enable the dangerous commands --write and --secure
+```
 
-* [tillitis-key1-apps repository](https://github.com/tillitis/tillitis-key1-apps),
-  with device apps and client apps for using the TKey
-* [Quickstart](doc/quickstart.md) to initial programming of the TKey
-  (only required for the DevKit)
-* [Toolchain setup](doc/toolchain_setup.md)
-* [Release Notes](doc/release_notes.md)
+For example to write the NVCM, verify and set the security bit use:
 
-### In-depth technical information
+```
+./pynvcm.py --my-design-is-good-enough --write application_fpga.bin --verify application_fpga.bin --ignore-blank --secure
+```
 
-* [System Description](doc/system_description/system_description.md)
-* [Threat Model](doc/threat_model/threat_model.md)
-* [Framing Protocol](doc/framing_protocol/framing_protocol.md)
-* [Boards](doc/system_description/boards.md)
-* [FPGA](doc/system_description/fpga.md)
-* [Software](doc/system_description/software.md)
-* [QEMU](https://github.com/tillitis/qemu/tree/tk1) (branch `tk1` in
-  separate repository)
+## Licenses and SPDX tags
 
-Note that development is ongoing. For example, changes might be made
-to the measuring and derivation of key material, causing the
-public/private keys of a signer app to change. To avoid unexpected
-changes, please use a tagged release. Read the [Release
-Notes](doc/release_notes.md) to keep up to date with changes and new
-releases.
+Unless otherwise noted, the project sources are licensed under the
+terms and conditions of the "ISC license":
 
-## About this repository
+> Copyright Tillitis AB.
+> 
+> Permission to use, copy, modify, and/or distribute this software
+> for any purpose with or without fee is hereby granted, provided
+> that the above copyright notice and this permission notice
+> appear in all copies.
+>
+> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+> WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+> WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+> AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+> CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+> LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+> NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+> CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-This repository contains hardware, software and utilities written as
-part of the TKey. It is structured as monolithic repository, or
-"monorepo", where all components live in one repository.
+Some specific files, usually under the same license, have other
+origin and copyright holders. `pynvcm.py` was originally written by:
 
-## Licensing
+- Trammell Hudson, hudson@trmm.net
+- Matthew Mets, [Github](https://github.com/cibomahto)
+- Peter Lawrence, [Github](https://github.com/majbthrd)
 
-See [LICENSES](./LICENSES/README.md) for more information about
-the projects' licenses.
+We keep a [LICENSE](LICENSE) file to easily autodetect the license.
 
-All contributors must adhere to the [Developer Certificate of Origin](dco.md).
+External source code we have imported are isolated in their own
+directories. They may be released under other licenses. This is noted
+with a similar `LICENSE` file in every directory containing imported
+sources.
+
+The project uses single-line references to Unique License Identifiers
+as defined by the Linux Foundation's [SPDX project](https://spdx.org/)
+on its own source files, but not necessarily imported files. The line
+in each individual source file identifies the license applicable to
+that file.
+
+The current set of valid, predefined SPDX identifiers can be found on
+the SPDX License List at:
+
+https://spdx.org/licenses/

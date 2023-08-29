@@ -1,4 +1,3 @@
-
 name: ci
 
 on:
@@ -26,37 +25,5 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: compile ch552 firmware
-        working-directory: hw/boards/mta1-usb-v1/ch552_fw
-        run: make
-
-      - name: make production test gateware
-        working-directory: hw/production_test/application_fpga_test_gateware
-        run: make
-
-      - name: compile firmware and testfw
-        working-directory: hw/application_fpga
-        run: make firmware.bin testfw.bin
-
-      - name: check fmt of our firmware C code
-        working-directory: hw/application_fpga
-        run: |
-          make -C fw/tk1 checkfmt
-          make -C fw/testfw checkfmt
-
-      - name: lint verilog using verilator
-        working-directory: hw/application_fpga
-        run: make lint
-
-      # doing this last as it takes long time
-      - name: make application FPGA gateware
-        working-directory: hw/application_fpga
-        run: make all
-
-      - name: check matching hashes for firmware.bin & application_fpga.bin
-        working-directory: hw/application_fpga
-        run: make check-binary-hashes
-
-      # TODO? first deal with hw/boards/ and hw/production_test/
-      # - name: check for SPDX tags
-      #   run: ./LICENSES/spdx-ensure
+      - name: check for SPDX tags
+        run: ./tools/spdx-ensure
