@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """IceFlasher, an iCE40 programming tool based on an RPi Pico"""
 
+# Copyright (C) 2023 - Tillitis AB
+# SPDX-License-Identifier: ISC
+
 import struct
 from typing import List, Any
 

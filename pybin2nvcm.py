@@ -3,6 +3,8 @@
 in https://github.com/YosysHQ/icestorm/pull/272
 """
 
+# Copyright (C) 2023 - Tillitis AB
+# SPDX-License-Identifier: ISC
 
 def pybin2nvcm(bitstream: bytes) -> list[str]:
     """Convert an ice40 bitstream into an NVCM program
