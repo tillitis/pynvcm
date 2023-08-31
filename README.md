@@ -1,16 +1,16 @@
 # pynvcm
 
-pynvcm with friends is a tool to program the NVCM of a Tillitis' Tkey
-(ICE40).
+pynvcm is a tool to program the non-volatile configuration memory
+(NVCM) inside the of a Tillitis' Tkey FPGA (ICE40).
 
 Either clone this repository and run from the Python interpreter or
 download and run our pre-packed executables from
 [releases](https://github.com/tillitis/pynvcm/releases).
 
-**Note**: programming the NVCM is non-reversiable.
+**Note**: programming the NVCM is non-reversable.
 
-**Note**: the NVCM can still be read out unless you set the security
-bit.
+**Note**: the NVCM (including the Unique Device Secret) can still be
+read out unless you set the security bit.
 
 ## Usage
 
