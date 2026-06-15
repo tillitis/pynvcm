@@ -80,13 +80,16 @@ class Nvcm():
             self,
             pins: dict,
             spi_speed: int,
-            debug: bool = False) -> None:
+            debug: bool = False,
+            external_power: bool = False) -> None:
         self.pins = pins
         self.debug = debug
+        self.external_power = external_power
 
         self.flasher = IceFlasher()
 
-        self.flasher.gpio_put(self.pins['5v_en'], False)
+        if not self.external_power:
+            self.flasher.gpio_put(self.pins['5v_en'], False)
         self.flasher.gpio_put(self.pins['crst'], False)
 
         # Configure pins for talking to ice40
@@ -94,7 +97,9 @@ class Nvcm():
         self.flasher.gpio_set_direction(pins['mosi'], True)
         self.flasher.gpio_set_direction(pins['sck'], True)
         self.flasher.gpio_set_direction(pins['miso'], False)
-        self.flasher.gpio_set_direction(pins['5v_en'], True)
+        # When an external supply owns the rail, leave 5v_en high-Z so we
+        # never source/sink the DUT power net.
+        self.flasher.gpio_set_direction(pins['5v_en'], not self.external_power)
         self.flasher.gpio_set_direction(pins['crst'], True)
         self.flasher.gpio_set_direction(pins['cdne'], False)
 
@@ -108,10 +113,14 @@ class Nvcm():
 
     def power_on(self) -> None:
         """Enable power to the DUT"""
+        if self.external_power:
+            return
         self.flasher.gpio_put(self.pins['5v_en'], True)
 
     def power_off(self) -> None:
         """Disable power to the DUT"""
+        if self.external_power:
+            return
         self.flasher.gpio_put(self.pins['5v_en'], False)
 
     def enable(self, chip_select: bool, reset: bool = True) -> None:
@@ -578,24 +587,30 @@ class Nvcm():
         print('Verification complete, NVCM contents match file')
 
 
-def sleep_flash(pins: dict, spi_speed: int) -> None:
+def sleep_flash(pins: dict, spi_speed: int,
+                external_power: bool = False) -> None:
     """ Put the SPI bootloader flash in deep sleep mode
 
     Keyword arguments:
     pins -- Dictionary of pins to use for SPI interface
+    external_power -- If true, an external supply owns the rail, so do not
+                      toggle 5v_en. We still hold the FPGA in reset so it stays
+                      off the shared SPI bus while we talk to the flash.
     """
     flasher = IceFlasher()
 
-    # Disable board power
-    flasher.gpio_put(pins['5v_en'], False)
-    flasher.gpio_set_direction(pins['5v_en'], True)
+    if not external_power:
+        # Disable board power
+        flasher.gpio_put(pins['5v_en'], False)
+        flasher.gpio_set_direction(pins['5v_en'], True)
 
     # Pull CRST low to prevent FPGA from starting
     flasher.gpio_set_direction(pins['crst'], True)
     flasher.gpio_put(pins['crst'], False)
 
-    # Enable board power
-    flasher.gpio_put(pins['5v_en'], True)
+    if not external_power:
+        # Enable board power
+        flasher.gpio_put(pins['5v_en'], True)
 
     # Configure pins for talking to flash
     flasher.gpio_set_direction(pins['ss'], True)
@@ -664,6 +679,13 @@ if __name__ == "__main__":
         default=15,
         help='SPI clock speed, in MHz')
 
+    parser.add_argument(
+        '--external-power',
+        dest='external_power',
+        action='store_true',
+        help='Do not control DUT power; an external supply owns the rail. '
+             'Skips all 5v_en toggling and only drives reset/SPI.')
+
     parser.add_argument('-i', '--info',
                         dest='read_info',
                         action='store_true',
@@ -727,12 +749,14 @@ if __name__ == "__main__":
     }
 
     if args.sleep_flash:
-        sleep_flash(tp1_pins, args.spi_speed)
+        sleep_flash(tp1_pins, args.spi_speed,
+                    external_power=args.external_power)
 
     nvcm = Nvcm(
         tp1_pins,
         args.spi_speed,
-        debug=args.verbose)
+        debug=args.verbose,
+        external_power=args.external_power)
     nvcm.power_on()
 
     # # Turn on ICE40 in CRAM boot mode
