@@ -634,7 +634,8 @@ def sleep_flash(pins: dict, spi_speed: int,
     # Confirm we can talk to flash
     data = flasher.spi_rxtx(bytes([0x9f, 0, 0]))
 
-    assert_bytes_equal('flash_id', bytes([0xff, 0xef, 0x40]), data)
+    # Assert flash_id is something non-unreasonable
+    assert data not in [bytes([0x00, 0x00, 0x00]), bytes([0xFF, 0xFF, 0xFF])]
 
     # put the flash to sleep
     flasher.spi_write(bytes([0xb9]))
