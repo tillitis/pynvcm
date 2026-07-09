@@ -59,6 +59,7 @@ class IceFlasher:
 
         # See: https://github.com/vpelletier/python-libusb1#usage
         self.context = usb1.USBContext()
+        self.use_bulk = False
 
         try:
             self.handle = self.context.openByVendorIDAndProductID(
@@ -80,9 +81,11 @@ class IceFlasher:
 
         # Check the device firmware version
         bcd_device = self.handle.getDevice().getbcdDevice()
-        if bcd_device != 0x0200:
+        if bcd_device < 0x0200:
             raise OSError(
                 'Pico firmware version out of date- please upgrade')
+        elif bcd_device >= 0x0201:
+            self.use_bulk = True
 
         self.handle.claimInterface(0)
 
@@ -145,10 +148,49 @@ class IceFlasher:
             self.handle.controlWrite(
                 0x40, request_id, 0, 0, data, timeout=100)
 
+    def _write_bulk(
+            self,
+            request_id: int,
+            data: bytes,
+            nonblocking: bool = False) -> None:
+
+        # prepend request byte
+        buf = bytes([request_id & 0xff]) + data
+        endpoint = 0x01
+
+        if nonblocking:
+            transfer = self.handle.getTransfer()
+            transfer.setBulk(
+                endpoint,
+                buf,
+                callback=None,
+                user_data=None,
+                timeout=1000
+            )
+            transfer.submit()
+            self.transfer_list.append(transfer)
+        else:
+            transferred = self.handle.bulkWrite(endpoint, buf, timeout=1000)
+            if transferred != len(buf):
+                raise IOError(
+                    f"_write_bulk short write: {transferred}/{len(buf)}")
+
     def _read(self, request_id: int, length: int) -> bytes:
         # self._wait_async()
         return self.handle.controlRead(
             0xC0, request_id, 0, 0, length, timeout=100)
+
+    def _read_bulk(self, request_id: int, length: int) -> bytes:
+        # request_id unused; kept to match the control-transfer prototype
+        endpoint = 0x81
+        data = self.handle.bulkRead(endpoint, length, timeout=1000)
+
+        if len(data) != length:
+            raise IOError(
+                f"_read_bulk short read: {len(data)}/{length}")
+
+        return bytes(data)
+
 
     def gpio_set_direction(self, pin: int, direction: bool) -> None:
         """Set the direction of a single GPIO pin
@@ -196,7 +238,10 @@ class IceFlasher:
                           (1 if val else 0) << pin,
                           )
 
-        self._write(self.COMMAND_PIN_VALUES, msg)
+        if self.use_bulk:
+            self._write_bulk(self.COMMAND_PIN_VALUES, msg)
+        else:
+            self._write(self.COMMAND_PIN_VALUES, msg)
 
     def gpio_get_all(self) -> int:
         """Read the input levels of all GPIO pins"""
@@ -316,19 +361,34 @@ class IceFlasher:
                 'Message too large, '
                 + f'size:{len(buf)} max:{self.SPI_MAX_TRANSFER_SIZE}')
 
-        header = struct.pack('>BI', toggle_cs, len(buf))
-        msg = bytearray()
-        msg.extend(header)
-        msg.extend(buf)
+        if self.use_bulk:
+            # Bulk header: [response_expected:1] [toggle_cs:1] [length:4]
+            header = struct.pack(
+                '>BBI',
+                1 if read_after_write else 0,
+                toggle_cs,
+                len(buf))
+            msg = bytearray(header)
+            msg.extend(buf)
 
-        self._write(self.COMMAND_SPI_XFER, msg)
+            self._write_bulk(self.COMMAND_SPI_XFER, msg)
 
-        if not read_after_write:
-            return bytes()
+            if not read_after_write:
+                return bytes()
 
-        msg_in = self._read(
-            self.COMMAND_SPI_XFER,
-            len(buf))
+            msg_in = self._read_bulk(self.COMMAND_SPI_XFER, len(buf))
+        else:
+            # Control header: [toggle_cs:1] [length:4]
+            header = struct.pack('>BI', toggle_cs, len(buf))
+            msg = bytearray(header)
+            msg.extend(buf)
+
+            self._write(self.COMMAND_SPI_XFER, msg)
+
+            if not read_after_write:
+                return bytes()
+
+            msg_in = self._read(self.COMMAND_SPI_XFER, len(buf))
 
         return msg_in
 
@@ -342,13 +402,15 @@ class IceFlasher:
         byte_count -- Number of bytes worth of clocks to send
         """
 
-        header = struct.pack('>I',
+        data = struct.pack('>I',
                              byte_count)
-        msg = bytearray()
-        msg.extend(header)
-        self._write(
-            self.COMMAND_SPI_CLKOUT,
-            msg)
+
+        if self.use_bulk:
+            self._write_bulk(
+                self.COMMAND_SPI_CLKOUT, data)
+        else:
+            self._write(
+                self.COMMAND_SPI_CLKOUT, data)
 
     def adc_read_all(self) -> tuple[float, float, float]:
         """Read the voltage values of ADC 0, 1, and 2
